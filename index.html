@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام متابعة وإدارة مسابقات النشاط الطلابي 1448هـ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
+    .tab-btn.active { background-color: #2563eb; color: #ffffff; font-weight: 700; }
+    .badge-urgent { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .badge-open { background-color: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .badge-soon { background-color: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+    .badge-done { background-color: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+    .badge-incomplete { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white sticky top-0 z-50 border-b border-slate-800 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xl font-bold shadow">
+          <i class="fa-solid fa-trophy"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-extrabold">نظام إدارة مسابقات النشاط الطلابي 1448هـ</h1>
+          <p class="text-xs text-slate-400 font-medium">المرحلتين الابتدائية والمتوسطة — إعداد: أ. علي جبريل</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="exportData()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-download text-blue-400"></i> تصدير
+        </button>
+        <label class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs rounded-lg border border-slate-700 transition flex items-center gap-1.5 cursor-pointer">
+          <i class="fa-solid fa-upload text-emerald-400"></i> استيراد
+          <input type="file" accept=".json" onchange="importData(event)" class="hidden">
+        </label>
+        <button onclick="resetToDefault()" class="px-3 py-1.5 bg-rose-950/70 hover:bg-rose-900 text-rose-200 text-xs rounded-lg border border-rose-800 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-rotate-right"></i> استعادة الأصل
+        </button>
+      </div>
+    </div>
+
+    <!-- Nav Tabs -->
+    <div class="bg-slate-900/95 border-t border-slate-800 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-7xl mx-auto flex space-x-reverse space-x-1 overflow-x-auto text-xs sm:text-sm py-2">
+        <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn active px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5">
+          <i class="fa-solid fa-chart-pie"></i> لوحة المتابعة العامة
+        </button>
+        <button onclick="switchTab('assignments')" id="tab-btn-assignments" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-300 hover:text-white">
+          <i class="fa-solid fa-list-check"></i> سجل التكليفات والمتابعة
+        </button>
+        <button onclick="switchTab('cards')" id="tab-btn-cards" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-300 hover:text-white">
+          <i class="fa-solid fa-id-card"></i> دليل وبطاقات المسابقات
+        </button>
+        <button onclick="switchTab('weekly')" id="tab-btn-weekly" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-300 hover:text-white">
+          <i class="fa-solid fa-calendar-week"></i> الخطة التنفيذية (17 أسبوعاً)
+        </button>
+        <button onclick="switchTab('routine')" id="tab-btn-routine" class="tab-btn px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-300 hover:text-white">
+          <i class="fa-solid fa-clipboard-user"></i> ورشة رائد النشاط
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+
+    <!-- 1. Dashboard Tab -->
+    <section id="tab-dashboard" class="space-y-6">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5" id="kpi-container"></div>
+
+      <!-- Urgent Alert -->
+      <div class="bg-gradient-to-r from-red-600 to-rose-600 rounded-2xl p-4 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0 animate-pulse">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold">إنذار استباقي: مسابقة القرآن الكريم قريبة جداً من الإغلاق!</h3>
+            <p class="text-xs text-red-100 mt-0.5">المشرف: معلم التربية الإسلامية | الإغلاق: 27 / 04 / 1448هـ (متبقي 3 أيام). الإجراء المطلوب: تدقيق الملفات والرفع فوراً.</p>
+          </div>
+        </div>
+        <button onclick="switchTab('assignments'); highlightRow(1);" class="px-3.5 py-1.5 bg-white text-rose-700 hover:bg-rose-50 font-bold rounded-xl text-xs transition shadow shrink-0">
+          سجل التكليف <i class="fa-solid fa-arrow-left mr-1"></i>
+        </button>
+      </div>
+
+      <!-- Priority Table -->
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+          <h2 class="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-bell text-amber-500"></i> جدول أولويات المتابعة الفورية
+          </h2>
+          <span class="text-xs text-slate-400">محدّث تلقائياً بحسب تاريخ الإغلاق</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs sm:text-sm">
+            <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+              <tr>
+                <th class="p-3 w-10 text-center">#</th>
+                <th class="p-3 min-w-[160px]">المسابقة / البرنامج</th>
+                <th class="p-3 min-w-[130px]">المشرف المسؤول</th>
+                <th class="p-3 min-w-[110px]">تاريخ الإغلاق</th>
+                <th class="p-3 min-w-[100px]">الحالة الزمنية</th>
+                <th class="p-3 min-w-[110px]">حالة الرفع</th>
+                <th class="p-3 min-w-[180px]">الإجراء الموصى به</th>
+              </tr>
+            </thead>
+            <tbody id="priority-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Assignments Tab -->
+    <section id="tab-assignments" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-3">
+        <div>
+          <h2 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+            <i class="fa-solid fa-pen-to-square text-blue-600"></i> سجل تكليفات المعلمين وحالة الرفع والتوثيق
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">عدل المشرفين، أعداد الطلاب، أرقام الإحالات وتواريخ الإنجاز. الحفظ فوري ومحلي في المتصفح.</p>
+        </div>
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <input type="text" id="assignment-search" onkeyup="renderAssignments()" placeholder="بحث عن مسابقة أو مشرف..." class="w-full md:w-60 px-3 py-1.5 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="assignment-filter-status" onchange="renderAssignments()" class="px-3 py-1.5 text-xs border rounded-xl bg-white outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">جميع الحالات</option>
+            <option value="لم تبدأ">لم تبدأ</option>
+            <option value="قيد الإعلان والإعداد">قيد الإعلان والإعداد</option>
+            <option value="مكتملة ومرفوعة بنجاح">مكتملة ومرفوعة بنجاح</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-right text-xs sm:text-sm">
+            <thead class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+              <tr>
+                <th class="p-3 w-10 text-center">#</th>
+                <th class="p-3 min-w-[160px]">المسابقة / البرنامج</th>
+                <th class="p-3 min-w-[140px]">المشرف المكلف</th>
+                <th class="p-3 min-w-[100px]">تاريخ الإغلاق</th>
+                <th class="p-3 min-w-[80px]">عدد الطلاب</th>
+                <th class="p-3 min-w-[130px]">رقم التوثيق / الإحالة</th>
+                <th class="p-3 min-w-[140px]">حالة الرفع</th>
+                <th class="p-3 min-w-[110px]">تاريخ الإنجاز</th>
+                <th class="p-3 w-16 text-center">حفظ</th>
+              </tr>
+            </thead>
+            <tbody id="assignments-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Cards & Guide Tab -->
+    <section id="tab-cards" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-3">
+        <div class="flex flex-wrap items-center gap-1.5" id="card-domain-filters">
+          <button onclick="setDomainFilter('all')" class="domain-btn active px-3 py-1 rounded-xl text-xs font-semibold bg-blue-600 text-white">الكل (16)</button>
+          <button onclick="setDomainFilter('المواطنة والحياة')" class="domain-btn px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">المواطنة والحياة</button>
+          <button onclick="setDomainFilter('الثقافة والفنون')" class="domain-btn px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">الثقافة والفنون</button>
+          <button onclick="setDomainFilter('العلوم والتقنية')" class="domain-btn px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">العلوم والتقنية</button>
+          <button onclick="setDomainFilter('الرياضة والصحة')" class="domain-btn px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">الرياضة والصحة</button>
+          <button onclick="setDomainFilter('المجال الكشفي')" class="domain-btn px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">المجال الكشفي</button>
+        </div>
+        <input type="text" id="cards-search" onkeyup="renderCards()" placeholder="بحث في بطاقات الدليل..." class="px-3 py-1.5 text-xs border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-60">
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="cards-container"></div>
+    </section>
+
+    <!-- 4. Weekly Plan Tab -->
+    <section id="tab-weekly" class="hidden space-y-4">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h2 class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+            <i class="fa-solid fa-calendar-days text-indigo-600"></i> الخطة التنفيذية الأسبوعية (17 أسبوعاً)
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">متابعة المهام الإجرائية وتأشير المنجز أسبوعياً.</p>
+        </div>
+        <div class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl font-bold border border-indigo-200">
+          17 أسبوعاً حتى نهاية العام الدراسي
+        </div>
+      </div>
+
+      <div class="space-y-3" id="weekly-container"></div>
+    </section>
+
+    <!-- 5. Routine Tab -->
+    <section id="tab-routine" class="hidden space-y-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-3">
+          <h3 class="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2 border-b pb-2.5">
+            <i class="fa-solid fa-clock-rotate-left text-blue-600"></i> الروتين الإجرائي الأسبوعي لرائد النشاط
+          </h3>
+          <ul class="space-y-2.5 text-xs sm:text-sm">
+            <li class="p-3 rounded-xl bg-blue-50/60 border border-blue-100 flex gap-2.5 items-start">
+              <span class="w-6 h-6 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">ح</span>
+              <div>
+                <p class="font-bold text-blue-900">الأحد: تحديد الأولويات والإنذارات</p>
+                <p class="text-slate-600 text-xs mt-0.5">مراجعة المسابقات التي ستغلق خلال 14 يوماً وتثبيت قائمة الإنجاز الأسبوعية.</p>
+              </div>
+            </li>
+            <li class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex gap-2.5 items-start">
+              <span class="w-6 h-6 rounded-lg bg-slate-700 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">ن</span>
+              <div>
+                <p class="font-bold text-slate-800">الإثنين: التواصل والتوجيه</p>
+                <p class="text-slate-600 text-xs mt-0.5">إرسال رسالة موحدة للمشرفين تتضمن المخرج المطلوب، الموعد النهائي، ورابط الرفع.</p>
+              </div>
+            </li>
+            <li class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex gap-2.5 items-start">
+              <span class="w-6 h-6 rounded-lg bg-slate-700 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">ر</span>
+              <div>
+                <p class="font-bold text-slate-800">الأربعاء: المتابعة الميدانية الفردية</p>
+                <p class="text-slate-600 text-xs mt-0.5">جلسة 10 دقائق مع كل مشرف معني لتحديث أعداد الطلاب وحل أي عوائق تنفيذية.</p>
+              </div>
+            </li>
+            <li class="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100 flex gap-2.5 items-start">
+              <span class="w-6 h-6 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">خ</span>
+              <div>
+                <p class="font-bold text-emerald-900">الخميس: تدقيق الملفات والرفع الرسمي</p>
+                <p class="text-slate-600 text-xs mt-0.5">مراجعة الأسماء، موافقات أولياء الأمور، جودة الملفات، واستخراج رقم الإحالة فوراً.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm space-y-3">
+          <h3 class="font-bold text-sm sm:text-base text-slate-800 flex items-center gap-2 border-b pb-2.5">
+            <i class="fa-solid fa-square-check text-emerald-600"></i> قائمة التحقق الذهبية قبل الرفع (Checklist)
+          </h3>
+          <div class="space-y-2 text-xs sm:text-sm" id="checklist-container"></div>
+          <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2">
+            <i class="fa-solid fa-lightbulb text-amber-600 mt-0.5"></i>
+            <div>
+              <strong>قاعدة عملية ذهبية:</strong>
+              <p class="mt-0.5">أي مسابقة لا تحتوي على (مشرف محدد + موعد داخلي مسبق + دليل رفع معتمد) = تُعد غير جاهزة للإغلاق.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-500 mt-auto">
+    نظام متابعة مسابقات النشاط الطلابي 1448هـ — حفظ محلي آمن في المتصفح (LocalStorage)
+  </footer>
+
+  <script>
+    const INITIAL_COMPETITIONS = [
+      {
+        id: 1, name: "مسابقة القرآن الكريم", domain: "المواطنة والحياة",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية",
+        startDateHijri: "16/04/1448هـ", endDateHijri: "27 / 04 / 1448هـ",
+        daysLeft: 3, timeStatus: "قريب من الإغلاق",
+        supervisor: "معلم التربية الإسلامية", status: "قيد الإعلان والإعداد",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "حفظ وتلاوة الأجزاء المحددة وفق الفروع المعتمدة في دليل المسابقة.",
+        nextAction: "رفع عاجل: تدقيق الملفات وإنهاء الإرسال",
+        mechanism: "ترشيح مباشر من المدرسة عبر رائد النشاط بنظام الأنشطة."
+      },
+      {
+        id: 2, name: "برنامج المعرفة الإحصائية", domain: "المواطنة والحياة",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية",
+        startDateHijri: "30/04/1448هـ", endDateHijri: "11 / 05 / 1448هـ",
+        daysLeft: 17, timeStatus: "لم يبدأ التسجيل",
+        supervisor: "معلم الرياضيات", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "اختبارات معرفية إلكترونية وتحليل رسوم بيانية ومؤشرات إحصائية.",
+        nextAction: "تهيئة الإعلان والمشرف والملفات",
+        mechanism: "تسجيل ذاتي من الطالب عبر المنصة الإلكترونية المخصصة."
+      },
+      {
+        id: 3, name: "مسابقة ريادة الأعمال (ريادي)", domain: "المواطنة والحياة",
+        stages: "المرحلة المتوسطة (بنين وبنات)", type: "فردية",
+        startDateHijri: "01/05/1448هـ", endDateHijri: "02 / 06 / 1448هـ",
+        daysLeft: 38, timeStatus: "لم يبدأ التسجيل",
+        supervisor: "الموجه الطلابي / رائد النشاط", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "إعداد نموذج العمل التجاري (Business Model Canvas) وعرض تقديمي للمشروع.",
+        nextAction: "تهيئة الإعلان والمشرف والملفات",
+        mechanism: "ترشيح من المدرسة عبر رائد النشاط ومصادقة الموجه الطلابي."
+      },
+      {
+        id: 4, name: "برنامج التثقيف بالنزاهة (نزاهة)", domain: "المواطنة والحياة",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية",
+        startDateHijri: "23/05/1448هـ", endDateHijri: "29 / 06 / 1448هـ",
+        daysLeft: 65, timeStatus: "لم يبدأ التسجيل",
+        supervisor: "معلم التفكير الناقد / الفكر الواعي", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "رسوم توعوية، مقالات إبداعية، مقاطع فيديو قصيرة، ومبادرات مدرسية تثقيفية.",
+        nextAction: "تهيئة الإعلان والمشرف والملفات",
+        mechanism: "ترشيح مدرسة عبر رائد النشاط بالتنسيق مع معلم الفكر الواعي."
+      },
+      {
+        id: 5, name: "منافسات اللغة العربية", domain: "الثقافة والفنون",
+        stages: "المرحلة المتوسطة (بنين وبنات)", type: "فردية",
+        startDateHijri: "05/06/1448هـ", endDateHijri: "05 / 08 / 1448هـ",
+        daysLeft: 100, timeStatus: "لم يبدأ التسجيل",
+        supervisor: "معلم اللغة العربية", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "اختبارات تحريرية، أداء إلقاء مسرحي حضوري، ولوحات خط عربي بأقلام الخط التقليدية.",
+        nextAction: "تهيئة الإعلان والمشرف والملفات",
+        mechanism: "ترشيح من المدرسة عبر رائد النشاط ومعلم اللغة العربية."
+      },
+      {
+        id: 6, name: "مهرجان المسرح المدرسي", domain: "الثقافة والفنون",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "جماعية",
+        startDateHijri: "05/06/1448هـ", endDateHijri: "05 / 08 / 1448هـ",
+        daysLeft: 100, timeStatus: "لم يبدأ التسجيل",
+        supervisor: "رائد النشاط / معلم اللغة العربية", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "عرض مسرحي مكتمل الأركان (نص، تمثيل، إخراج، ديكور) مصور بفيديو عالي الجودة.",
+        nextAction: "تهيئة الإعلان والمشرف والملفات",
+        mechanism: "ترشيح فرقة المدرسة المسرحية عبر رائد النشاط وتوجيه المسرح."
+      },
+      {
+        id: 7, name: "برنامج الوعي المالي (ريالي)", domain: "المواطنة والحياة",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية وجماعية",
+        startDateHijri: "مستمر", endDateHijri: "21 / 06 / 1448هـ",
+        daysLeft: 57, timeStatus: "تاريخ غير مكتمل",
+        supervisor: "الموجه الطلابي / معلم المهارات", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "إكمال حقائب المنصة الإلكترونية + تنظيم معرض وتطبيق عملي (سوق ريالي المدرسية).",
+        nextAction: "استكمال التاريخ المرجعي والمشرف",
+        mechanism: "تسجيل ذاتي للطالب عبر المنصة المخصصة ومتابعة الموجه الطلابي."
+      },
+      {
+        id: 8, name: "جائزة المستثمر الذكي الخليجي", domain: "المواطنة والحياة",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية وجماعية",
+        startDateHijri: "مستمر", endDateHijri: "21 / 06 / 1448هـ",
+        daysLeft: 57, timeStatus: "تاريخ غير مكتمل",
+        supervisor: "رائد النشاط الطلابي", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "فيديو توعوي قصير، رسم كاريكاتيري توعوي، أو قصة مصورة (Digital Comic).",
+        nextAction: "استكمال التاريخ المرجعي والبدء بالحصر",
+        mechanism: "تسجيل ذاتي ورفع المشاركة عبر موقع الجائزة الرسمي."
+      },
+      {
+        id: 9, name: "مسابقة إنجاز السعودية", domain: "المواطنة والحياة",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية وجماعية",
+        startDateHijri: "20/04/1448هـ", endDateHijri: "20 / 06 / 1448هـ",
+        daysLeft: 56, timeStatus: "التسجيل مفتوح",
+        supervisor: "رائد النشاط الطلابي", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "حقائب تدريبية ومشاريع محاكاة للشركات الطلابية ومبادرات خدمة المجتمع.",
+        nextAction: "متابعة الترشيح وعدد المشاركين",
+        mechanism: "ترشيح وتنسيق من رائد النشاط عبر منصة إنجاز."
+      },
+      {
+        id: 10, name: "مسابقة Robo G للروبوت", domain: "العلوم والتقنية",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية وجماعية",
+        startDateHijri: "01/03/1448هـ", endDateHijri: "01 / 07 / 1448هـ",
+        daysLeft: 66, timeStatus: "التسجيل مفتوح",
+        supervisor: "معلم الحاسب / العلوم", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "روبوت مبرمج ينفذ المهام المحددة على طاولة التنافس المعتمدة + ملف فني للمشروع.",
+        nextAction: "متابعة الترشيح والتدريب على المضمار",
+        mechanism: "ترشيح من المدرسة عبر رائد النشاط ومعلم الحاسب/العلوم."
+      },
+      {
+        id: 11, name: "جائزة الأميرة صيتة (صيتاثون)", domain: "المواطنة والحياة",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية وجماعية",
+        startDateHijri: "20/04/1448هـ", endDateHijri: "11 / 07 / 1448هـ",
+        daysLeft: 76, timeStatus: "التسجيل مفتوح",
+        supervisor: "رائد النشاط / الموجه الطلابي", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "توثيق مبادرة اجتماعية أو تطوعية نفذتها المدرسة وشهدت أثراً ملموساً.",
+        nextAction: "متابعة صياغة ملف المبادرة",
+        mechanism: "تسجيل ذاتي أو ترشيح رسمي عبر موقع الجائزة."
+      },
+      {
+        id: 12, name: "مسابقة السلامة المرورية (سلامتنا)", domain: "المواطنة والحياة",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية",
+        startDateHijri: "20/04/1448هـ", endDateHijri: "11 / 08 / 1448هـ",
+        daysLeft: 136, timeStatus: "التسجيل مفتوح",
+        supervisor: "معلم التربية الفنية", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "رسم فني توعوي، مجسمات هندسية، أو مقطع فيديو توعوي قصير.",
+        nextAction: "تنظيم ورشة الرسم والتصوير المدرسية",
+        mechanism: "ترشيح مدرسة عبر رائد النشاط ومعلم التربية الفنية."
+      },
+      {
+        id: 13, name: "مسابقة أقرأ (مركز إثراء)", domain: "الثقافة والفنون",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "فردية",
+        startDateHijri: "01/04/1448هـ", endDateHijri: "20 / 08 / 1448هـ",
+        daysLeft: 145, timeStatus: "التسجيل مفتوح",
+        supervisor: "أمين مصادر التعلم / معلم اللغة العربية", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "جوازات قراءة ملخصة تتضمن مراجعة ونقد الكتب المقروءة + مقابلة تقييمية.",
+        nextAction: "متابعة قراءة وتلخيص الكتب للطلاب المترشحين",
+        mechanism: "تسجيل ذاتي مباشر من الطالب عبر موقع جائزة أقرأ إثراء."
+      },
+      {
+        id: 14, name: "دوري المشي للمدارس", domain: "الرياضة والصحة",
+        stages: "المرحلة المتوسطة (بنين وبنات)", type: "فردية",
+        startDateHijri: "16/08/1448هـ", endDateHijri: "25 / 09 / 1448هـ",
+        daysLeft: 150, timeStatus: "لم يبدأ التسجيل",
+        supervisor: "معلم التربية البدنية", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "احتساب الخطوات المكتسبة والموثقة يومياً عبر التطبيق الإلكتروني المعتمد.",
+        nextAction: "تهيئة الإعلان وحث الطلاب على تثبيت التطبيق",
+        mechanism: "تحميل تطبيق (تحدي المشي) والتسجيل المباشر من الطالب في قسم الفعاليات."
+      },
+      {
+        id: 15, name: "دوري الرياضات الإلكترونية", domain: "الرياضة والصحة",
+        stages: "المرحلة المتوسطة (بنين وبنات)", type: "فردية وجماعية",
+        startDateHijri: "16/08/1448هـ", endDateHijri: "29 / 10 / 1448هـ",
+        daysLeft: 184, timeStatus: "لم يبدأ التسجيل",
+        supervisor: "معلم البدنية / رائد النشاط", status: "لم تبدأ",
+        studentsCount: 0, refNumber: "", completionDate: "",
+        deliverable: "خوض التصفيات والبطولات الإلكترونية للألعاب المعتمدة وفق اللائحة الرسمية.",
+        nextAction: "تهيئة الإعلان وتحديد الفرق",
+        mechanism: "تسجيل إلكتروني عبر منصة الاتحاد السعودي للرياضات الإلكترونية."
+      },
+      {
+        id: 16, name: "منافسة رسل السلام للتميز الكشفي", domain: "المجال الكشفي",
+        stages: "الابتدائي والمتوسط (بنين وبنات)", type: "جماعية",
+        startDateHijri: "18/03/1448هـ", endDateHijri: "23 / 04 / 1448هـ",
+        daysLeft: 0, timeStatus: "مكتملة",
+        supervisor: "قائد الفرقة الكشفية", status: "مكتملة ومرفوعة بنجاح",
+        studentsCount: 12, refNumber: "ACT-1448-SCOUT-01", completionDate: "20/04/1448هـ",
+        deliverable: "ملف توثيقي مصور لتنفيذ شارات الهوايات والمخيم الكشفي وخدمة المجتمع.",
+        nextAction: "تم الرفع والتوثيق بنجاح",
+        mechanism: "ترشيح الفرقة الكشفية المدرسية عبر المفوضية الكشفية ونظام نور."
+      }
+    ];
+
+    const INITIAL_WEEKS = [
+      { week: 1, title: "الأسبوع 1", dates: "26-28 / 04 / 1448هـ", tasks: ["إغلاق ترشيحات مسابقة القرآن الكريم", "تحديد مشرفي مسابقات الأسبوع 2"] },
+      { week: 2, title: "الأسبوع 2", dates: "01-05 / 05 / 1448هـ", tasks: ["إعلان برنامج المعرفة الإحصائية", "بدء حصر أفكار مسابقة ريادي"] },
+      { week: 3, title: "الأسبوع 3", dates: "08-12 / 05 / 1448هـ", tasks: ["متابعة تسجيل الطلاب بالمعرفة الإحصائية", "جلسة عمل مع معلمي الموهوبين"] },
+      { week: 4, title: "الأسبوع 4", dates: "15-19 / 05 / 1448هـ", tasks: ["استكمال تواريخ ريالي والمستثمر الذكي", "تدريب طلاب Robo G على المضمار"] },
+      { week: 5, title: "الأسبوع 5", dates: "22-26 / 05 / 1448هـ", tasks: ["إطلاق حملة التثقيف بنزاهة", "فرز المشاركات الأولية في صيتاثون"] },
+      { week: 6, title: "الأسبوع 6", dates: "29/05 - 03/06 / 1448هـ", tasks: ["إغلاق ترشيحات مسابقة ريادي", "متابعة ورش مسابقة سلامتنا"] },
+      { week: 7, title: "الأسبوع 7", dates: "06-10 / 06 / 1448هـ", tasks: ["تدشين تدريبات منافسات اللغة العربية", "اختيار نص مسرحية مهرجان المسرح"] },
+      { week: 8, title: "الأسبوع 8", dates: "13-17 / 06 / 1448هـ", tasks: ["مراجعة جوازات القراءة في أقرأ إثراء", "بروفات المسرح المدرسي"] },
+      { week: 9, title: "الأسبوع 9", dates: "20-24 / 06 / 1448هـ", tasks: ["إغلاق وتسليم ريالي والمستثمر الذكي", "إغلاق مشاريع إنجاز السعودية"] },
+      { week: 10, title: "الأسبوع 10", dates: "27/06 - 02/07 / 1448هـ", tasks: ["رفع أعمال برنامج نزاهة", "الاختبارات التجريبية لروبوت Robo G"] },
+      { week: 11, title: "الأسبوع 11", dates: "05-09 / 07 / 1448هـ", tasks: ["إغلاق مشاريع Robo G", "إغلاق ورفع ملفات جائزة الأميرة صيتة"] },
+      { week: 12, title: "الأسبوع 12", dates: "12-16 / 07 / 1448هـ", tasks: ["تقييم لوحات الخط العربي والإلقاء", "تسجيل العرض المسرحي بالفيديو"] },
+      { week: 13, title: "الأسبوع 13", dates: "19-23 / 07 / 1448هـ", tasks: ["رفع مشاركات منافسات اللغة العربية والمسرح", "متابعة معرض سلامتنا"] },
+      { week: 14, title: "الأسبوع 14", dates: "26-30 / 07 / 1448هـ", tasks: ["إغلاق مسابقة السلامة المرورية (سلامتنا)", "إغلاق مسابقة أقرأ إثراء"] },
+      { week: 15, title: "الأسبوع 15", dates: "04-08 / 08 / 1448هـ", tasks: ["تدشين تحدي دوري المشي المدرسي", "حصر لاعبي الرياضات الإلكترونية"] },
+      { week: 16, title: "الأسبوع 16", dates: "11-15 / 08 / 1448هـ", tasks: ["متابعة مؤشرات المشي اليومية", "تصفيات دوري الرياضات الإلكترونية"] },
+      { week: 17, title: "الأسبوع 17", dates: "18-22 / 08 / 1448هـ", tasks: ["إغلاق جميع المسابقات وإعداد التقرير الختامي", "تكريم الطلاب والمشرفين المتميزين"] }
+    ];
+
+    const INITIAL_CHECKLIST = [
+      { id: "chk_1", text: "التأكد من اعتماد وموافقة ولي أمر الطالب على المشاركة", done: true },
+      { id: "chk_2", text: "مطابقة الفئة العمرية والمرحلة الدراسية وفق شروط الدليل", done: true },
+      { id: "chk_3", text: "فحص جودة الملفات المرفوعة (PDF بجودة عالية، فيديو بصيغة MP4 وبدقة 1080p)", done: false },
+      { id: "chk_4", text: "التأكد من اكتمال استمارات التسجيل الرسمية وختم المدرسة", done: false },
+      { id: "chk_5", text: "استخراج رقم القيد أو الإحالة الرسمية وأرشفته في السجل المحلي", done: false },
+      { id: "chk_6", text: "إشعار المشرف المعلم بتأكيد الرفع النهائي وتزويده بنسخة من الإحالة", done: false }
+    ];
+
+    // LocalStorage Helper
+    function getStoredData(key, fallback) {
+      const d = localStorage.getItem('hermes_activity_' + key);
+      return d ? JSON.parse(d) : fallback;
+    }
+    function saveStoredData(key, val) {
+      localStorage.setItem('hermes_activity_' + key, JSON.stringify(val));
+    }
+
+    let competitions = getStoredData('competitions', INITIAL_COMPETITIONS);
+    let weeklyTasks = getStoredData('weekly', INITIAL_WEEKS);
+    let checklist = getStoredData('checklist', INITIAL_CHECKLIST);
+    let currentDomain = 'all';
+
+    function renderKPIs() {
+      const total = competitions.length;
+      const done = competitions.filter(c => c.status === 'مكتملة ومرفوعة بنجاح').length;
+      const urgent = competitions.filter(c => c.timeStatus === 'قريب من الإغلاق').length;
+      const open = competitions.filter(c => c.timeStatus === 'التسجيل مفتوح').length;
+      const future = competitions.filter(c => c.timeStatus === 'لم يبدأ التسجيل').length;
+      const incomplete = competitions.filter(c => c.timeStatus === 'تاريخ غير مكتمل').length;
+      const pct = Math.round((done / total) * 100);
+
+      document.getElementById('kpi-container').innerHTML = `
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500 font-semibold">إجمالي البرامج</div>
+          <div class="text-2xl font-black text-slate-900 mt-1">${total}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">16 مسابقة وبرنامج</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-red-200 bg-red-50/30 shadow-sm">
+          <div class="text-xs text-red-700 font-semibold">قريب من الإغلاق</div>
+          <div class="text-2xl font-black text-red-600 mt-1">${urgent}</div>
+          <div class="text-[10px] text-red-500 mt-0.5">إغلاق خلال أيام</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-emerald-200 bg-emerald-50/30 shadow-sm">
+          <div class="text-xs text-emerald-700 font-semibold">التسجيل مفتوح</div>
+          <div class="text-2xl font-black text-emerald-600 mt-1">${open}</div>
+          <div class="text-[10px] text-emerald-500 mt-0.5">متاحة للترشيح</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-sky-200 bg-sky-50/30 shadow-sm">
+          <div class="text-xs text-sky-700 font-semibold">لم يبدأ التسجيل</div>
+          <div class="text-2xl font-black text-sky-600 mt-1">${future}</div>
+          <div class="text-[10px] text-sky-500 mt-0.5">مجدولة لاحقاً</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-amber-200 bg-amber-50/30 shadow-sm">
+          <div class="text-xs text-amber-700 font-semibold">تاريخ غير مكتمل</div>
+          <div class="text-2xl font-black text-amber-600 mt-1">${incomplete}</div>
+          <div class="text-[10px] text-amber-500 mt-0.5">تحتاج استكمال</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-purple-200 bg-purple-50/30 shadow-sm">
+          <div class="text-xs text-purple-700 font-semibold">نسبة الإنجاز</div>
+          <div class="text-2xl font-black text-purple-700 mt-1">${pct}%</div>
+          <div class="text-[10px] text-purple-500 mt-0.5">${done} من ${total} مرفوعة</div>
+        </div>
+      `;
+    }
+
+    function getBadgeClass(status) {
+      if (status === 'قريب من الإغلاق') return 'badge-urgent';
+      if (status === 'التسجيل مفتوح') return 'badge-open';
+      if (status === 'لم يبدأ التسجيل') return 'badge-soon';
+      if (status === 'مكتملة') return 'badge-done';
+      return 'badge-incomplete';
+    }
+
+    function renderPriorityTable() {
+      const tbody = document.getElementById('priority-table-body');
+      // Sort: urgent first, then open, then incomplete, then future, then done
+      const sorted = [...competitions].sort((a,b) => {
+        const order = { 'قريب من الإغلاق': 1, 'التسجيل مفتوح': 2, 'تاريخ غير مكتمل': 3, 'لم يبدأ التسجيل': 4, 'مكتملة': 5 };
+        return (order[a.timeStatus] || 9) - (order[b.timeStatus] || 9);
+      });
+
+      tbody.innerHTML = sorted.map((c, i) => `
+        <tr class="hover:bg-slate-50/80 transition" id="prow-${c.id}">
+          <td class="p-3 text-center text-slate-400 font-mono">${i+1}</td>
+          <td class="p-3 font-bold text-slate-900">
+            ${c.name}
+            <span class="block text-[11px] font-normal text-slate-500">${c.domain}</span>
+          </td>
+          <td class="p-3 text-slate-700">${c.supervisor}</td>
+          <td class="p-3 font-mono text-xs text-slate-600">${c.endDateHijri}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded-md text-xs font-semibold ${getBadgeClass(c.timeStatus)}">${c.timeStatus}</span></td>
+          <td class="p-3">
+            <span class="inline-flex items-center gap-1 text-xs ${c.status === 'مكتملة ومرفوعة بنجاح' ? 'text-purple-700 font-bold' : c.status === 'قيد الإعلان والإعداد' ? 'text-blue-600 font-medium' : 'text-slate-400'}">
+              <i class="fa-solid ${c.status === 'مكتملة ومرفوعة بنجاح' ? 'fa-circle-check text-purple-600' : 'fa-circle-dot'}"></i>
+              ${c.status}
+            </span>
+          </td>
+          <td class="p-3 text-xs text-slate-700 font-medium">${c.nextAction}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAssignments() {
+      const tbody = document.getElementById('assignments-table-body');
+      const query = (document.getElementById('assignment-search')?.value || '').trim().toLowerCase();
+      const filterStatus = document.getElementById('assignment-filter-status')?.value || 'all';
+
+      const filtered = competitions.filter(c => {
+        const matchQ = c.name.toLowerCase().includes(query) || c.supervisor.toLowerCase().includes(query);
+        const matchS = filterStatus === 'all' || c.status === filterStatus;
+        return matchQ && matchS;
+      });
+
+      tbody.innerHTML = filtered.map(c => `
+        <tr class="hover:bg-slate-50/80 transition" id="arow-${c.id}">
+          <td class="p-3 text-center text-slate-400 font-mono">${c.id}</td>
+          <td class="p-3 font-bold text-slate-900">
+            ${c.name}
+            <span class="block text-[11px] font-normal text-slate-500">${c.domain} | ${c.type}</span>
+          </td>
+          <td class="p-3">
+            <input type="text" id="sup-${c.id}" value="${c.supervisor}" class="w-full px-2 py-1 text-xs border rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+          </td>
+          <td class="p-3 font-mono text-xs text-slate-600">${c.endDateHijri}</td>
+          <td class="p-3">
+            <input type="number" id="std-${c.id}" value="${c.studentsCount}" min="0" class="w-16 px-2 py-1 text-xs border rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none text-center">
+          </td>
+          <td class="p-3">
+            <input type="text" id="ref-${c.id}" value="${c.refNumber || ''}" placeholder="رقم الإحالة / القيد" class="w-full px-2 py-1 text-xs border rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+          </td>
+          <td class="p-3">
+            <select id="stat-${c.id}" class="w-full px-2 py-1 text-xs border rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+              <option value="لم تبدأ" ${c.status === 'لم تبدأ' ? 'selected' : ''}>لم تبدأ</option>
+              <option value="قيد الإعلان والإعداد" ${c.status === 'قيد الإعلان والإعداد' ? 'selected' : ''}>قيد الإعلان والإعداد</option>
+              <option value="مكتملة ومرفوعة بنجاح" ${c.status === 'مكتملة ومرفوعة بنجاح' ? 'selected' : ''}>مكتملة ومرفوعة بنجاح</option>
+            </select>
+          </td>
+          <td class="p-3">
+            <input type="text" id="cdate-${c.id}" value="${c.completionDate || ''}" placeholder="1448/--/--" class="w-full px-2 py-1 text-xs border rounded-lg bg-slate-50 focus:bg-white focus:ring-1 focus:ring-blue-500 outline-none font-mono">
+          </td>
+          <td class="p-3 text-center">
+            <button onclick="saveRow(${c.id})" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow transition">
+              <i class="fa-solid fa-floppy-disk"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function saveRow(id) {
+      const item = competitions.find(x => x.id === id);
+      if (!item) return;
+      item.supervisor = document.getElementById(`sup-${id}`).value;
+      item.studentsCount = parseInt(document.getElementById(`std-${id}`).value) || 0;
+      item.refNumber = document.getElementById(`ref-${id}`).value;
+      item.status = document.getElementById(`stat-${id}`).value;
+      item.completionDate = document.getElementById(`cdate-${id}`).value;
+      
+      if (item.status === 'مكتملة ومرفوعة بنجاح') {
+        item.timeStatus = 'مكتملة';
+      }
+
+      saveStoredData('competitions', competitions);
+      renderKPIs();
+      renderPriorityTable();
+      renderCards();
+      
+      const row = document.getElementById(`arow-${id}`);
+      if (row) {
+        row.classList.add('bg-emerald-50');
+        setTimeout(() => row.classList.remove('bg-emerald-50'), 1000);
+      }
+    }
+
+    function setDomainFilter(dom) {
+      currentDomain = dom;
+      document.querySelectorAll('.domain-btn').forEach(btn => {
+        if (btn.innerText.includes(dom) || (dom === 'all' && btn.innerText.includes('الكل'))) {
+          btn.className = 'domain-btn active px-3 py-1 rounded-xl text-xs font-semibold bg-blue-600 text-white';
+        } else {
+          btn.className = 'domain-btn px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200';
+        }
+      });
+      renderCards();
+    }
+
+    function renderCards() {
+      const container = document.getElementById('cards-container');
+      const query = (document.getElementById('cards-search')?.value || '').trim().toLowerCase();
+
+      const filtered = competitions.filter(c => {
+        const matchD = currentDomain === 'all' || c.domain === currentDomain;
+        const matchQ = c.name.toLowerCase().includes(query) || c.deliverable.toLowerCase().includes(query) || c.mechanism.toLowerCase().includes(query);
+        return matchD && matchQ;
+      });
+
+      container.innerHTML = filtered.map(c => `
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-3">
+          <div>
+            <div class="flex justify-between items-start gap-2 border-b border-slate-100 pb-2.5">
+              <div>
+                <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">${c.domain}</span>
+                <h3 class="font-bold text-slate-900 text-sm mt-1">${c.name}</h3>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[11px] font-semibold shrink-0 ${getBadgeClass(c.timeStatus)}">${c.timeStatus}</span>
+            </div>
+            
+            <div class="mt-3 space-y-2 text-xs text-slate-600">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">المستهدفون:</span>
+                <span class="font-medium text-slate-800">${c.stages}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">نوع المشاركة:</span>
+                <span class="font-medium text-slate-800">${c.type}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">تاريخ الإغلاق:</span>
+                <span class="font-mono font-bold text-slate-800">${c.endDateHijri}</span>
+              </div>
+              <div class="p-2 bg-slate-50 rounded-xl border border-slate-100 mt-2">
+                <span class="font-bold text-slate-700 block mb-0.5">المخرج المطلوب:</span>
+                <p class="text-slate-600 leading-relaxed text-[11px]">${c.deliverable}</p>
+              </div>
+              <div class="p-2 bg-blue-50/50 rounded-xl border border-blue-100">
+                <span class="font-bold text-blue-900 block mb-0.5">آلية الترشيح والرفع:</span>
+                <p class="text-blue-800 leading-relaxed text-[11px]">${c.mechanism}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-100 flex justify-between items-center text-xs">
+            <span class="text-slate-500">المشرف: <strong class="text-slate-800">${c.supervisor}</strong></span>
+            <span class="text-[11px] font-bold ${c.status === 'مكتملة ومرفوعة بنجاح' ? 'text-purple-700' : 'text-slate-400'}">${c.status}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderWeekly() {
+      const container = document.getElementById('weekly-container');
+      container.innerHTML = weeklyTasks.map((w, wIndex) => `
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-2.5 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">${w.week}</span>
+              <h3 class="font-bold text-slate-900 text-sm">${w.title}</h3>
+            </div>
+            <span class="text-xs font-mono text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">${w.dates}</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            ${w.tasks.map((t, tIndex) => {
+              const taskId = `w_${wIndex}_${tIndex}`;
+              const done = getStoredData(taskId, false);
+              return `
+                <label class="flex items-start gap-2.5 p-2.5 rounded-xl border transition cursor-pointer ${done ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900 line-through' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}">
+                  <input type="checkbox" onchange="toggleWeeklyTask('${taskId}')" ${done ? 'checked' : ''} class="mt-0.5 rounded text-indigo-600 focus:ring-0">
+                  <span class="text-xs font-medium">${t}</span>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleWeeklyTask(id) {
+      const current = getStoredData(id, false);
+      saveStoredData(id, !current);
+      renderWeekly();
+    }
+
+    function renderChecklist() {
+      const container = document.getElementById('checklist-container');
+      container.innerHTML = checklist.map(c => `
+        <label class="flex items-start gap-2.5 p-2.5 rounded-xl border transition cursor-pointer ${c.done ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900 font-semibold' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}">
+          <input type="checkbox" onchange="toggleChecklist('${c.id}')" ${c.done ? 'checked' : ''} class="mt-0.5 rounded text-emerald-600 focus:ring-0">
+          <span class="text-xs leading-relaxed">${c.text}</span>
+        </label>
+      `).join('');
+    }
+
+    function toggleChecklist(id) {
+      const item = checklist.find(x => x.id === id);
+      if (item) {
+        item.done = !item.done;
+        saveStoredData('checklist', checklist);
+        renderChecklist();
+      }
+    }
+
+    function switchTab(tabId) {
+      ['dashboard', 'assignments', 'cards', 'weekly', 'routine'].forEach(t => {
+        const sec = document.getElementById('tab-' + t);
+        const btn = document.getElementById('tab-btn-' + t);
+        if (t === tabId) {
+          sec.classList.remove('hidden');
+          btn.className = 'tab-btn active px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 bg-blue-600 text-white';
+        } else {
+          sec.classList.add('hidden');
+          btn.className = 'tab-btn px-3.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 text-slate-300 hover:text-white';
+        }
+      });
+    }
+
+    function highlightRow(id) {
+      setTimeout(() => {
+        const row = document.getElementById(`arow-${id}`);
+        if (row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          row.classList.add('bg-red-50');
+          setTimeout(() => row.classList.remove('bg-red-50'), 2500);
+        }
+      }, 200);
+    }
+
+    function exportData() {
+      const exportObj = {
+        competitions,
+        weeklyTasks,
+        checklist,
+        timestamp: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `activity_competitions_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(evt) {
+      const file = evt.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.competitions) {
+            competitions = data.competitions;
+            saveStoredData('competitions', competitions);
+          }
+          if (data.checklist) {
+            checklist = data.checklist;
+            saveStoredData('checklist', checklist);
+          }
+          initAll();
+          alert('تم استيراد البيانات بنجاح!');
+        } catch(err) {
+          alert('خطأ في قراءة ملف النسخة الاحتياطية.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetToDefault() {
+      if (confirm('هل أنت متأكد من استعادة البيانات الأصلية؟ سيتم مسح التعديلات المحلية.')) {
+        localStorage.clear();
+        competitions = JSON.parse(JSON.stringify(INITIAL_COMPETITIONS));
+        weeklyTasks = JSON.parse(JSON.stringify(INITIAL_WEEKS));
+        checklist = JSON.parse(JSON.stringify(INITIAL_CHECKLIST));
+        initAll();
+      }
+    }
+
+    function initAll() {
+      renderKPIs();
+      renderPriorityTable();
+      renderAssignments();
+      renderCards();
+      renderWeekly();
+      renderChecklist();
+    }
+
+    document.addEventListener('DOMContentLoaded', initAll);
+  </script>
+</body>
+</html>
